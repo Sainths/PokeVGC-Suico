@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéTorneio</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root { --p: #e3350d; --s: #316ab2; --d: #212121; --l: #f5f5f5; }
+        body { font-family: system-ui, sans-serif; background: var(--l); color: var(--d); margin: 0; padding: 10px; }
+        .box { max-width: 500px; margin: 0 auto; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1, h2 { text-align: center; color: var(--p); }
+        input { width: 100%; padding: 8px; margin: 5px 0 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn { background: var(--s); color: #fff; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; }
+        .hidden { display: none; }
+        .nav { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 10px; }
+        .tab { flex: 1; text-align: center; padding: 8px; cursor: pointer; font-weight: bold; }
+        .tab.active { color: var(--p); border-bottom: 2px solid var(--p); }
+        .card { background: #f9f9f9; padding: 10px; border-radius: 4px; margin-bottom: 8px; border-left: 4px solid var(--s); display: flex; justify-content: space-between; align-items: center; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h1>PokéTorneio 🏆</h1>
+    <div id="auth">
+        <input type="text" id="user" placeholder="Treinador ou Sainths/PokeManers">
+        <input type="password" id="pass" placeholder="Senha">
+        <input type="url" id="link" placeholder="Link do Time (Pokepast)">
+        <button class="btn" onclick="logar()">Entrar</button>
+    </div>
+    <div id="main" class="hidden">
+        <div class="nav">
+            <div class="tab active" onclick="tab('h')">Placar</div>
+            <div class="tab" onclick="tab('t')">Times</div>
+            <div class="tab" onclick="tab('m')">Partidas</div>
+        </div>
+        <div id="ch">
+            <h3>Treinador: <span id="u-disp"></span></h3>
+            <table id="s-table"><thead><tr><th>Pos</th><th>Nome</th><th>Pts</th><th>Status</th></tr></thead><tbody></tbody></table>
+            <div id="adm" class="hidden" style="background:#ffe0e0; padding:10px; margin-top:10px; border-radius:4px;">
+                <h4>Painel Juiz</h4>
+                <button onclick="cmd('toggleLista','aberta')">🟢 Abrir Listas</button>
+                <button onclick="cmd('toggleLista','fechada')">🔴 Fechar Listas</button>
+                <button class="btn" style="background:var(--p); margin-top:10px;" onclick="cmd('resetTorneio')">Resetar Torneio</button>
+            </div>
+        </div>
+        <div id="ct" class="hidden">
+            <p id="lock" style="color:red;" class="hidden">🔒 Lista Fechada pelos Juízes.</p>
+            <table id="t-table"><thead><tr><th>Treinador</th><th>Link</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div id="cm" class="hidden"><div id="p-list"></div></div>
+    </div>
+</div>
+<script>
+    const URL = "https://script.google.com/macros/s/AKfycbzbBKzDHyBDiw1bpo4-GgklaDWUdh7Aj95sF5_ItyZ8qmH718i6Yln_MZWnIy2PLuNg/exec";
+    let uLog = "", cLog = "player", cache = {};
+
+    function logar() {
+        let u = document.getElementById('user').value.trim(), p = document.getElementById('pass').value, l = document.getElementById('link').value.trim();
+        fetch(URL, { method: "POST", body: JSON.stringify({ action: "registrarOuLogar", username: u, password: p, teamLink: l }) })
+        .then(r => r.json()).then(r => {
+            if(r.status === "success") {
+                uLog = u; cLog = r.role; document.getElementById('u-disp').innerText = u;
+                document.getElementById('auth').style.display = 'none'; document.getElementById('main').classList.remove('hidden');
+                if(cLog === "admin") document.getElementById('adm').classList.remove('hidden');
+                att();
+            } else alert(r.msg);
+        });
+    }
+    function att() { fetch(URL).then(r => r.json()).then(d => { cache = d; render(); }); }
+    function render() {
+        let sb = document.querySelector('#s-table tbody'); sb.innerHTML = "";
+        cache.jogadores.sort((a,b)=>b.pontos-a.pontos).forEach((j,i)=>{ sb.innerHTML+=`<tr><td>${i+1}º</td><td>${j.nome}</td><td>${j.pontos}</td><td>${j.status}</td></tr>`; });
+        let tb = document.querySelector('#t-table tbody'); tb.innerHTML = "";
+        if(cache.config.listaAberta === "fechada" && cLog !== "admin") document.getElementById('lock').classList.remove('hidden');
+        else {
+            document.getElementById('lock').classList.add('hidden');
+            cache.jogadores.forEach(j => { tb.innerHTML+=`<tr><td>${j.nome}</td><td><a href="${j.time}" target="_blank">Ver Time 🔗</a></td></tr>`; });
+        }
+    }
+    function cmd(act, est) { fetch(URL, { method: "POST", body: JSON.stringify({ action: act, estado: est }) }).then(()=> { alert("Sucesso!"); att(); }); }
+    function tab(t) {
+        document.getElementById('ch').classList.add('hidden'); document.getElementById('ct').classList.add('hidden'); document.getElementById('cm').classList.add('hidden');
+        document.getElementById('c'+t).classList.remove('hidden'); att();
+    }
+</script>
+</body>
+</html>
