@@ -3,54 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PokéTorneio</title>
+    <title>PokéTorneio Pro</title>
     <link rel="manifest" href="manifest.json">
     <style>
         :root { --p: #e3350d; --s: #316ab2; --d: #212121; --l: #f5f5f5; }
         body { font-family: system-ui, sans-serif; background: var(--l); color: var(--d); margin: 0; padding: 10px; }
         .box { max-width: 500px; margin: 0 auto; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h1, h2 { text-align: center; color: var(--p); }
-        input { width: 100%; padding: 8px; margin: 5px 0 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .btn { background: var(--s); color: #fff; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; }
+        h1, h2, h3 { text-align: center; color: var(--p); margin: 5px 0; }
+        input { width: 100%; padding: 10px; margin: 5px 0 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn { background: var(--s); color: #fff; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
+        .btn-v { background: #28a745; }
         .hidden { display: none; }
         .nav { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 10px; }
-        .tab { flex: 1; text-align: center; padding: 8px; cursor: pointer; font-weight: bold; }
-        .tab.active { color: var(--p); border-bottom: 2px solid var(--p); }
-        .card { background: #f9f9f9; padding: 10px; border-radius: 4px; margin-bottom: 8px; border-left: 4px solid var(--s); display: flex; justify-content: space-between; align-items: center; }
-        table { width: 100%; border-collapse: collapse; }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-weight: bold; }
+        .tab.active { color: var(--p); border-bottom: 3px solid var(--p); }
+        .card { background: #f9f9f9; padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 5px solid var(--s); }
+        .m-flex { display: flex; justify-content: space-between; align-items: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+        th { background: #eee; }
+        .btn-m { padding: 4px 8px; font-size: 11px; margin-left: 2px; cursor: pointer; }
     </style>
 </head>
 <body>
 <div class="box">
     <h1>PokéTorneio 🏆</h1>
+    <!-- TELA DE LOGIN -->
     <div id="auth">
-        <input type="text" id="user" placeholder="Treinador ou Sainths/PokeManers">
+        <input type="text" id="user" placeholder="Nome do Treinador">
         <input type="password" id="pass" placeholder="Senha">
         <input type="url" id="link" placeholder="Link do Time (Pokepast)">
-        <button class="btn" onclick="logar()">Entrar</button>
+        <button class="btn" onclick="logar()">Entrar / Registrar</button>
     </div>
+    <!-- PAINEL PRINCIPAL -->
     <div id="main" class="hidden">
         <div class="nav">
-            <div class="tab active" onclick="tab('h')">Placar</div>
-            <div class="tab" onclick="tab('t')">Times</div>
-            <div class="tab" onclick="tab('m')">Partidas</div>
+            <div class="tab active" id="th" onclick="tab('h')">Placar</div>
+            <div class="tab" id="tt" onclick="tab('t')">Times</div>
+            <div class="tab" id="tm" onclick="tab('m')">Partidas</div>
         </div>
+        <!-- ABA PLACAR -->
         <div id="ch">
-            <h3>Treinador: <span id="u-disp"></span></h3>
-            <table id="s-table"><thead><tr><th>Pos</th><th>Nome</th><th>Pts</th><th>Status</th></tr></thead><tbody></tbody></table>
-            <div id="adm" class="hidden" style="background:#ffe0e0; padding:10px; margin-top:10px; border-radius:4px;">
-                <h4>Painel Juiz</h4>
-                <button onclick="cmd('toggleLista','aberta')">🟢 Abrir Listas</button>
-                <button onclick="cmd('toggleLista','fechada')">🔴 Fechar Listas</button>
-                <button class="btn" style="background:var(--p); margin-top:10px;" onclick="cmd('resetTorneio')">Resetar Torneio</button>
+            <h3>Treinador: <span id="u-disp" style="color:var(--s)"></span> (<span id="f-disp">Suíço</span>)</h3>
+            <table id="s-table"><thead><tr><th>Pos</th><th>Nome</th><th>Pts</th><th>Ders</th><th>Status</th></tr></thead><tbody></tbody></table>
+            <div id="adm" class="hidden" style="background:#ffebeb; border:2px dashed var(--p); padding:10px; margin-top:15px; border-radius:6px;">
+                <h4>🛡️ Controle dos Juízes</h4>
+                <button class="btn btn-v" onclick="acao('gerarRodada')">⚔️ Gerar Próxima Rodada</button>
+                <div style="margin-top:10px; text-align:center;">
+                    <button class="btn-m" onclick="acao('toggleLista','aberta')">🟢 Abrir Listas</button>
+                    <button class="btn-m" onclick="acao('toggleLista','fechada')">🔴 Fechar Listas</button>
+                </div>
+                <button class="btn" style="background:var(--p); margin-top:15px;" onclick="resetar()">⚠️ RESET TOTAL</button>
             </div>
         </div>
+        <!-- ABA TIMES -->
         <div id="ct" class="hidden">
-            <p id="lock" style="color:red;" class="hidden">🔒 Lista Fechada pelos Juízes.</p>
-            <table id="t-table"><thead><tr><th>Treinador</th><th>Link</th></tr></thead><tbody></tbody></table>
+            <p id="lock" style="color:red; font-weight:bold; text-align:center;" class="hidden">🔒 Lista Fechada por ordem dos Juízes.</p>
+            <table id="t-table"><thead><tr><th>Treinador</th><th>Ação</th></tr></thead><tbody></tbody></table>
         </div>
-        <div id="cm" class="hidden"><div id="p-list"></div></div>
+        <!-- ABA PARTIDAS -->
+        <div id="cm" class="hidden">
+            <h3>Confrontos Atuais (Rodada <span id="rd-disp">0</span>)</h3>
+            <div id="p-list"></div>
+        </div>
     </div>
 </div>
 <script>
@@ -59,6 +74,7 @@
 
     function logar() {
         let u = document.getElementById('user').value.trim(), p = document.getElementById('pass').value, l = document.getElementById('link').value.trim();
+        if(!u || !p) return alert("Preencha Usuário e Senha.");
         fetch(URL, { method: "POST", body: JSON.stringify({ action: "registrarOuLogar", username: u, password: p, teamLink: l }) })
         .then(r => r.json()).then(r => {
             if(r.status === "success") {
@@ -71,19 +87,42 @@
     }
     function att() { fetch(URL).then(r => r.json()).then(d => { cache = d; render(); }); }
     function render() {
+        document.getElementById('f-disp').innerText = cache.config.faseAtual.toUpperCase();
+        document.getElementById('rd-disp').innerText = cache.config.rodadaAtual;
+        // 1. Classificação
         let sb = document.querySelector('#s-table tbody'); sb.innerHTML = "";
-        cache.jogadores.sort((a,b)=>b.pontos-a.pontos).forEach((j,i)=>{ sb.innerHTML+=`<tr><td>${i+1}º</td><td>${j.nome}</td><td>${j.pontos}</td><td>${j.status}</td></tr>`; });
+        cache.jogadores.sort((a,b)=>b.pontos-a.pontos).forEach((j,i)=>{ sb.innerHTML+=`<tr><td>${i+1}º</td><td><b>${j.nome}</b></td><td>${j.pontos}</td><td>${j.derrotas}/3</td><td>${j.status}</td></tr>`; });
+        // 2. Times (Ocultação se fechada para jogadores)
         let tb = document.querySelector('#t-table tbody'); tb.innerHTML = "";
-        if(cache.config.listaAberta === "fechada" && cLog !== "admin") document.getElementById('lock').classList.remove('hidden');
+        if(cache.config.listaAberta === "fechada" && cLog !== "admin") { document.getElementById('lock').classList.remove('hidden'); } 
         else {
             document.getElementById('lock').classList.add('hidden');
-            cache.jogadores.forEach(j => { tb.innerHTML+=`<tr><td>${j.nome}</td><td><a href="${j.time}" target="_blank">Ver Time 🔗</a></td></tr>`; });
+            cache.jogadores.forEach(j => {
+                let btn = j.time.startsWith('http') ? `<a href="${j.time}" target="_blank" style="background:#316ab2; color:white; padding:4px 8px; text-decoration:none; border-radius:4px; font-size:12px;">Ver Time 🔗</a>` : 'Não enviado';
+                tb.innerHTML+=`<tr><td>${j.nome}</td><td>${btn}</td></tr>`;
+            });
         }
+        // 3. Partidas com envio de Resultados
+        let pl = document.getElementById('p-list'); pl.innerHTML = "";
+        let lista = cache.config.faseAtual === "suico" ? cache.confrontosSuico : cache.confrontosMata;
+        let ativas = lista.filter(p => p.rodada == cache.config.rodadaAtual || cache.config.faseAtual === "matamata");
+        if(ativas.length === 0) { pl.innerHTML = "<p style='text-align:center;'>Nenhum confronto ativo.</p>"; return; }
+        ativas.forEach(p => {
+            let acoes = p.vencedor ? `🏆 <b>${p.vencedor}</b>` : `
+                <button class="btn-m" onclick="lancar('${p.rodada}','${p.j1}','${p.j2}','${p.j1}')">Vence ${p.j1}</button>
+                <button class="btn-m" onclick="lancar('${p.rodada}','${p.j1}','${p.j2}','${p.j2}')">Vence ${p.j2}</button>
+                ${cache.config.faseAtual==='suico'?`<button class="btn-m" onclick="lancar('${p.rodada}','${p.j1}','${p.j2}','Empate')">Empate</button>`:''}
+            `;
+            pl.innerHTML += `<div class="card"><div class="m-flex"><div><b>${p.j1}</b> vs <b>${p.j2}</b></div><div>${acoes}</div></div></div>`;
+        });
     }
-    function cmd(act, est) { fetch(URL, { method: "POST", body: JSON.stringify({ action: act, estado: est }) }).then(()=> { alert("Sucesso!"); att(); }); }
+    function lancar(rd, j1, j2, v) { fetch(URL, { method: "POST", body: JSON.stringify({ action: "lancarResultado", rodada: rd, j1: j1, j2: j2, vencedor: v }) }).then(()=> { alert("Resultado Registrado!"); att(); }); }
+    function acao(act, est) { fetch(URL, { method: "POST", body: JSON.stringify({ action: act, estado: est }) }).then(()=> { alert("Sucesso!"); att(); }); }
+    function resetar() { if(confirm("Apagar todos os dados do torneio?")) { fetch(URL, { method: "POST", body: JSON.stringify({ action: "resetTorneio" }) }).then(()=> window.location.reload()); } }
     function tab(t) {
         document.getElementById('ch').classList.add('hidden'); document.getElementById('ct').classList.add('hidden'); document.getElementById('cm').classList.add('hidden');
-        document.getElementById('c'+t).classList.remove('hidden'); att();
+        document.getElementById('th').classList.remove('active'); document.getElementById('tt').classList.remove('active'); document.getElementById('tm').classList.remove('active');
+        document.getElementById('c'+t).classList.remove('hidden'); document.getElementById('t'+t).classList.add('active'); att();
     }
 </script>
 </body>
