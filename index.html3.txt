@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéTorneio Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root { --primary: #e3350d; --secondary: #316ab2; --dark: #212121; --light: #f5f5f5; }
+        body { font-family: system-ui, sans-serif; background: var(--light); color: var(--dark); margin: 0; padding: 15px; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        h1, h2 { text-align: center; color: var(--primary); margin-top: 0; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-weight: bold; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .btn { background: var(--secondary); color: #fff; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+        .btn-danger { background: var(--primary); }
+        .hidden { display: none; }
+        .nav { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-weight: bold; }
+        .tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+        .card { background: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid var(--secondary); display: flex; justify-content: space-between; align-items: center; }
+        .link-btn { background: #007bff; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #eee; }
+        .admin-box { background: #ffebeb; border: 2px dashed var(--primary); padding: 15px; border-radius: 8px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>PokéTorneio 🏆</h1>
+
+    <!-- TELA DE AUTENTICAÇÃO -->
+    <div id="auth-screen">
+        <h2>Acesso ao Torneio</h2>
+        <div class="form-group">
+            <label>Treinador:</label>
+            <input type="text" id="username" placeholder="Seu nome ou Sainths/PokeManers">
+        </div>
+        <div class="form-group">
+            <label>Senha:</label>
+            <input type="password" id="password" placeholder="Sua senha secreta">
+        </div>
+        <div class="form-group" id="link-group">
+            <label>Link do Time (Pokepast):</label>
+            <input type="url" id="team-link" placeholder="https://pokepast.es...">
+        </div>
+        <button class="btn" onclick="logar()">Entrar no Sistema</button>
+    </div>
+
+    <!-- TELA PRINCIPAL DO APP -->
+    <div id="main-screen" class="hidden">
+        <div class="nav">
+            <div class="tab active" id="tab-home" onclick="mudarAba('home')">Placar</div>
+            <div class="tab" id="tab-teams" onclick="mudarAba('teams')">Times</div>
+            <div class="tab" id="tab-matches" onclick="mudarAba('matches')">Partidas</div>
+        </div>
+
+        <!-- ABA HOME -->
+        <div id="content-home">
+            <h3>Treinador: <span id="user-display" style="color:var(--secondary)"></span></h3>
+            <h4>Classificação Geral</h4>
+            <table id="standings-table">
+                <thead><tr><th>Pos</th><th>Nome</th><th>Pts</th><th>Status</th></tr></thead>
+                <tbody></tbody>
+            </table>
+
+            <!-- PAINEL EXCLUSIVO DOS JUIZES -->
+            <div id="admin-panel" class="admin-box hidden">
+                <h3>🛡️ Painel de Controle dos Juízes</h3>
+                <div class="form-group">
+                    <label>Configuração da Lista de Times:</label>
+                    <button class="btn" onclick="definirLista('aberta')" style="background:#28a745">🟢 Abrir Lista para Todos</button>
+                    <button class="btn" onclick="definirLista('fechada')" style="background:#6c757d">🔴 Fechar Lista (Apenas Juízes Vêem)</button>
+                </div>
+                <button class="btn btn-danger" style="margin-top:20px;" onclick="resetarTudo()">⚠️ RESETAR TORNEIO TOTAL</button>
+            </div>
+        </div>
+
+        <!-- ABA TIMES -->
+        <div id="content-teams" class="hidden">
+            <h3>Listas de Times Registradas</h3>
+            <div id="block-message" class="hidden"><p style="color:red; font-weight:bold; text-align:center;">🔒 Os juízes fecharam as listas para este torneio!</p></div>
+            <table id="teams-table">
+                <thead><tr><th>Treinador</th><th>Visualizar</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- ABA PARTIDAS -->
+        <div id="content-matches" class="hidden">
+            <h3>Confrontos da Rodada</h3>
+            <div id="pairings-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Cole aqui o link da sua implantação do Google Apps Script
+    const SCRIPT_URL = "SUA_URL_AQUI"; 
+    
+    let usuarioLogado = "";
+    let cargoLogado = "player"; // player ou admin
+    let cacheDados = {};
+
+    function logar() {
+        const u = document.getElementById('username').value.trim();
+        const p = document.getElementById('password').value;
+        const l = document.getElementById('team-link').value.trim();
+
+        if(!u || !p) return alert("Preencha os campos obrigatórios.");
+
+        fetch(SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "registrarOuLogar", username: u, password: p, teamLink: l })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if(res.status === "success") {
+                usuarioLogado = u;
+                cargoLogado = res.role;
+                document.getElementById('user-display').innerText = u;
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('main-screen').classList.remove('hidden');
+                
+                if(cargoLogado === "admin") {
+                    document.getElementById('admin-panel').classList.remove('hidden');
+                }
+                carregarDadosDoBanco();
+            } else {
+                alert(res.msg);
+            }
+        });
+    }
+
+    function carregarDadosDoBanco() {
+        fetch(SCRIPT_URL).then(res => res.json()).then(data => {
+            cacheDados = data;
+            renderizarTabelas();
+        });
+    }
+
+    function renderizarTabelas() {
+        // Renderiza Classificação
+        const sBody = document.querySelector('#standings-table tbody');
+        sBody.innerHTML = "";
+        let sorted = cacheDados.jogadores.sort((a,b) => b.pontos - a.pontos);
+        sorted.forEach((j, i) => {
+            sBody.innerHTML += `<tr><td>${i+1}º</td><td><b>${j.nome}</b></td><td>${j.pontos}</td><td>${j.status}</td></tr>`;
+        });
+
+        // Renderiza Times baseado nas regras de sigilo solicitadas
+        const tBody = document.querySelector('#teams-table tbody');
+        const msgBlock = document.getElementById('block-message');
+        tBody.innerHTML = "";
+        
+        if(cacheDados.config.listaAberta === "fechada" && cargoLogado !== "admin") {
+            msgBlock.classList.remove('hidden');
+        } else {
+            msgBlock.classList.add('hidden');
+            cacheDados.jogadores.forEach(j => {
+                let linkHtml = j.time.startsWith('http') ? `<a href="${j.time}" target="_blank" class="link-btn">Ver Time 🔗</a>` : 'Não enviado';
+                tBody.innerHTML += `<tr><td>${j.nome}</td><td>${linkHtml}</td></tr>`;
+            });
+        }
+    }
+
+    function definirLista(estado) {
+        fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "toggleLista", estado: estado }) })
+        .then(() => { alert("Estado da lista modificado!"); carregarDadosDoBanco(); });
+    }
+
+    function resetarTudo() {
+        if(confirm("Tem certeza que deseja apagar TODOS OS DADOS do torneio?")) {
+            fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "resetTorneio" }) })
+            .then(() => { alert("Torneio Resetado!"); window.location.reload(); });
+        }
+    }
+
+    function mudarAba(aba) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('content-home').classList.add('hidden');
+        document.getElementById('content-teams').classList.add('hidden');
+        document.getElementById('content-matches').classList.add('hidden');
+        document.getElementById('tab-'+aba).classList.add('active');
+        document.getElementById('content-'+aba).classList.remove('hidden');
+    }
+</script>
+</body>
+</html>
